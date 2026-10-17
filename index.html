@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>N3 단어장</title>
+<style>
+  :root{--bg:#f6f4ef;--card:#fff;--ink:#1f1d1a;--muted:#7a756c;--line:#e4dfd5;--accent:#c0392b;--ok:#2e7d4f;--no:#b23a2e;}
+  @media (prefers-color-scheme:dark){:root{--bg:#191816;--card:#24221f;--ink:#f0ece4;--muted:#a39d92;--line:#3a3732;--accent:#e06656;--ok:#4fae78;--no:#e0665a;color-scheme:dark}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Apple SD Gothic Neo","Hiragino Sans",sans-serif}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .set{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font:inherit}
+  .set b{display:block;font-size:15px}
+  .set span{color:var(--muted);font-size:12px}
+  .set.done{border-color:var(--ok)}
+  .set.done span{color:var(--ok)}
+  .bar{height:4px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent)}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+  .link{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;padding:4px 0}
+  .meta{color:var(--muted);font-size:13px;text-align:right}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:36px 16px 28px;text-align:center}
+  .kanji{font-size:56px;font-weight:600;letter-spacing:2px;word-break:keep-all;font-family:"Hiragino Mincho ProN","Yu Mincho",serif}
+  .reveal{min-height:64px;margin-top:14px}
+  .kana{font-size:22px;color:var(--accent)}
+  .ko{font-size:18px;margin-top:4px}
+  .row{display:flex;gap:10px;margin-top:14px}
+  .row button{flex:1;padding:14px 8px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+  .row button.on{border-color:var(--accent);color:var(--accent)}
+  .row .no{background:var(--no);border-color:var(--no);color:#fff}
+  .row .ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .msg{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 18px;text-align:center}
+  .msg h2{margin:0 0 8px;font-size:20px}
+  .msg p{color:var(--muted);margin:0 0 18px}
+  .primary{padding:14px 20px;border-radius:12px;border:0;background:var(--accent);color:#fff;font:inherit;font-size:16px;cursor:pointer;width:100%}
+  textarea{width:100%;min-height:220px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px;font:13px/1.5 ui-monospace,Menlo,monospace}
+  details{margin-top:24px;color:var(--muted)}
+  details summary{cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  kbd{font:12px ui-monospace,Menlo,monospace;padding:1px 6px;border-radius:5px;border:1px solid currentColor;opacity:.6;margin:0 2px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 홈 -->
+  <section id="home">
+    <h1>JLPT N3 단어장</h1>
+    <div class="sub" id="summary"></div>
+    <div class="sets" id="sets"></div>
+    <details>
+      <summary>단어 불러오기 / 초기화</summary>
+      <p class="small">한 줄에 하나씩 <b>한자,히라가나,뜻</b> (쉼표 또는 탭 구분). 불러오면 진행 기록이 초기화돼요.</p>
+      <textarea id="importBox" placeholder="経験,けいけん,경험&#10;準備,じゅんび,준비"></textarea>
+      <div class="row">
+        <button id="importBtn">불러오기</button>
+        <button id="resetBtn">진행 기록 초기화</button>
+      </div>
+      <p class="small" id="importMsg"></p>
+    </details>
+  </section>
+
+  <!-- 퀴즈 -->
+  <section id="quiz" hidden>
+    <div class="top">
+      <button class="link" id="backBtn">← 목록 (자동 저장됨)</button>
+      <div class="meta" id="qmeta"></div>
+    </div>
+    <div class="card">
+      <div class="kanji" id="kanji"></div>
+      <div class="reveal">
+        <div class="kana" id="kana" hidden></div>
+        <div class="ko" id="ko" hidden></div>
+      </div>
+    </div>
+    <div class="row">
+      <button id="showKana">히라가나 <kbd>1</kbd></button>
+      <button id="showKo">한국어 <kbd>2</kbd></button>
+    </div>
+    <div class="row">
+      <button class="no" id="noBtn"><kbd>←</kbd> 모르겠음</button>
+      <button class="ok" id="okBtn">알겠음 <kbd>→</kbd></button>
+    </div>
+  </section>
+
+  <!-- 라운드 사이 안내 -->
+  <section id="between" hidden>
+    <div class="msg">
+      <h2 id="bTitle"></h2>
+      <p id="bText"></p>
+      <button class="primary" id="bBtn"></button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const SET_SIZE = 100, MAX_ROUND = 7;
+const KEY_WORDS = 'n3v2.words', KEY_STATE = 'n3v2.state';
+
+// 영상 "JLPT N3급 필수단어 876개" (Sena's language TV) 순서 그대로
+const DEFAULT_WORDS = [{"kanji": "合図", "kana": "あいず", "ko": "신호"}, {"kanji": "料金", "kana": "りょうきん", "ko": "요금"}, {"kanji": "表面", "kana": "ひょうめん", "ko": "표면"}, {"kanji": "失業", "kana": "しつぎょう", "ko": "실업"}, {"kanji": "岩", "kana": "いわ", "ko": "바위"}, {"kanji": "湖", "kana": "みずうみ", "ko": "호수"}, {"kanji": "塩", "kana": "しお", "ko": "소금"}, {"kanji": "息", "kana": "いき", "ko": "숨, 호흡"}, {"kanji": "努力", "kana": "どりょく", "ko": "노력"}, {"kanji": "目的", "kana": "もくてき", "ko": "목적"}, {"kanji": "当日", "kana": "とうじつ", "ko": "당일"}, {"kanji": "相談", "kana": "そうだん", "ko": "상담"}, {"kanji": "文章", "kana": "ぶんしょう", "ko": "문장"}, {"kanji": "活動", "kana": "かつどう", "ko": "활동"}, {"kanji": "意志", "kana": "いし", "ko": "의지"}, {"kanji": "外食", "kana": "がいしょく", "ko": "외식"}, {"kanji": "応募", "kana": "おうぼ", "ko": "응모"}, {"kanji": "性格", "kana": "せいかく", "ko": "성격"}, {"kanji": "影響", "kana": "えいきょう", "ko": "영향"}, {"kanji": "訪問", "kana": "ほうもん", "ko": "방문"}, {"kanji": "空席", "kana": "くうせき", "ko": "공석, 빈자리"}, {"kanji": "未来", "kana": "みらい", "ko": "미래"}, {"kanji": "首都", "kana": "しゅと", "ko": "수도"}, {"kanji": "卒業", "kana": "そつぎょう", "ko": "졸업"}, {"kanji": "指示", "kana": "しじ", "ko": "지시"}, {"kanji": "全部", "kana": "ぜんぶ", "ko": "전부"}, {"kanji": "家賃", "kana": "やちん", "ko": "집세"}, {"kanji": "現在", "kana": "げんざい", "ko": "현재"}, {"kanji": "協力", "kana": "きょうりょく", "ko": "협력"}, {"kanji": "案内", "kana": "あんない", "ko": "안내"}, {"kanji": "守る", "kana": "まもる", "ko": "지키다, 보호하다"}, {"kanji": "破れる", "kana": "やぶれる", "ko": "찢어지다, 파손되다"}, {"kanji": "自由", "kana": "じゆう", "ko": "자유"}, {"kanji": "整理", "kana": "せいり", "ko": "정리"}, {"kanji": "原料", "kana": "げんりょう", "ko": "원료"}, {"kanji": "希望", "kana": "きぼう", "ko": "희망"}, {"kanji": "解決", "kana": "かいけつ", "ko": "해결"}, {"kanji": "地球", "kana": "ちきゅう", "ko": "지구"}, {"kanji": "笑う", "kana": "わらう", "ko": "웃다"}, {"kanji": "集める", "kana": "あつめる", "ko": "모으다"}, {"kanji": "届ける", "kana": "とどける", "ko": "전달하다, 배달하다, 신고하다"}, {"kanji": "包む", "kana": "つつむ", "ko": "싸다, 포장하다"}, {"kanji": "疲れる", "kana": "つかれる", "ko": "피로하다, 지치다"}, {"kanji": "頼む", "kana": "たのむ", "ko": "부탁하다"}, {"kanji": "内緒", "kana": "ないしょ", "ko": "비밀"}, {"kanji": "観察", "kana": "かんさつ", "ko": "관찰"}, {"kanji": "禁止", "kana": "きんし", "ko": "금지"}, {"kanji": "早退", "kana": "そうたい", "ko": "조퇴"}, {"kanji": "回収", "kana": "かいしゅう", "ko": "회수"}, {"kanji": "自然", "kana": "しぜん", "ko": "자연"}, {"kanji": "横断", "kana": "おうだん", "ko": "횡단"}, {"kanji": "消費", "kana": "しょうひ", "ko": "소비"}, {"kanji": "面接", "kana": "めんせつ", "ko": "면접"}, {"kanji": "留守", "kana": "るす", "ko": "부재중"}, {"kanji": "発見", "kana": "はっけん", "ko": "발견"}, {"kanji": "体力", "kana": "たいりょく", "ko": "체력"}, {"kanji": "相手", "kana": "あいて", "ko": "상대"}, {"kanji": "期限", "kana": "きげん", "ko": "기한"}, {"kanji": "不安", "kana": "ふあん", "ko": "불안"}, {"kanji": "計算", "kana": "けいさん", "ko": "계산"}, {"kanji": "値段", "kana": "ねだん", "ko": "가격"}, {"kanji": "正解", "kana": "せいかい", "ko": "정답"}, {"kanji": "目標", "kana": "もくひょう", "ko": "목표"}, {"kanji": "方向", "kana": "ほうこう", "ko": "방향"}, {"kanji": "疑問", "kana": "ぎもん", "ko": "의문"}, {"kanji": "注文", "kana": "ちゅうもん", "ko": "주문"}, {"kanji": "主張", "kana": "しゅちょう", "ko": "주장"}, {"kanji": "交換", "kana": "こうかん", "ko": "교환"}, {"kanji": "別れる", "kana": "わかれる", "ko": "헤어지다, 작별하다"}, {"kanji": "覚める", "kana": "さめる", "ko": "잠을 깨다, 눈이 떠지다"}, {"kanji": "汗", "kana": "あせ", "ko": "땀"}, {"kanji": "傷", "kana": "きず", "ko": "상처, 흠집"}, {"kanji": "前後", "kana": "ぜんご", "ko": "전후, 앞뒤"}, {"kanji": "発生", "kana": "はっせい", "ko": "발생"}, {"kanji": "登場", "kana": "とうじょう", "ko": "등장"}, {"kanji": "調子", "kana": "ちょうし", "ko": "상태"}, {"kanji": "週刊誌", "kana": "しゅうかんし", "ko": "주간지"}, {"kanji": "商品", "kana": "しょうひん", "ko": "상품"}, {"kanji": "底", "kana": "そこ", "ko": "바닥, 밑"}, {"kanji": "分類", "kana": "ぶんるい", "ko": "분류"}, {"kanji": "合計", "kana": "ごうけい", "ko": "합계"}, {"kanji": "決まり", "kana": "きまり", "ko": "규칙, 결정"}, {"kanji": "改札口", "kana": "かいさつぐち", "ko": "개찰구"}, {"kanji": "経由", "kana": "けいゆ", "ko": "경유"}, {"kanji": "休日", "kana": "きゅうじつ", "ko": "휴일"}, {"kanji": "感じ", "kana": "かんじ", "ko": "느낌"}, {"kanji": "内容", "kana": "ないよう", "ko": "내용"}, {"kanji": "緊張", "kana": "きんちょう", "ko": "긴장"}, {"kanji": "混雑", "kana": "こんざつ", "ko": "혼잡"}, {"kanji": "噂", "kana": "うわさ", "ko": "소문"}, {"kanji": "出張", "kana": "しゅっちょう", "ko": "출장"}, {"kanji": "夫婦", "kana": "ふうふ", "ko": "부부"}, {"kanji": "仮定", "kana": "かてい", "ko": "가정(임시로 정하는 것)"}, {"kanji": "多少", "kana": "たしょう", "ko": "다소, 많고 적음"}, {"kanji": "頭痛", "kana": "ずつう", "ko": "두통"}, {"kanji": "応援", "kana": "おうえん", "ko": "응원"}, {"kanji": "輝く", "kana": "かがやく", "ko": "빛나다"}, {"kanji": "穴", "kana": "あな", "ko": "구멍, 구덩이"}, {"kanji": "絞る", "kana": "しぼる", "ko": "(손이나 기계 등의 압력으로 우유나 즙 등을) 짜다"}, {"kanji": "搾る", "kana": "しぼる", "ko": "(수건 등을 비틀어) 짜다"}, {"kanji": "最新", "kana": "さいしん", "ko": "최신"}, {"kanji": "法律", "kana": "ほうりつ", "ko": "법률"}, {"kanji": "応用", "kana": "おうよう", "ko": "응용"}, {"kanji": "広告", "kana": "こうこく", "ko": "광고"}, {"kanji": "渋滞", "kana": "じゅうたい", "ko": "정체, 밀림"}, {"kanji": "文句", "kana": "もんく", "ko": "불평, 잔소리, (문장 속의) 문구"}, {"kanji": "関心", "kana": "かんしん", "ko": "관심"}, {"kanji": "資源", "kana": "しげん", "ko": "자원"}, {"kanji": "平均", "kana": "へいきん", "ko": "평균"}, {"kanji": "他人", "kana": "たにん", "ko": "타인"}, {"kanji": "香り", "kana": "かおり", "ko": "향기"}, {"kanji": "外科", "kana": "げか", "ko": "외과"}, {"kanji": "実力", "kana": "じつりょく", "ko": "실력"}, {"kanji": "当然", "kana": "とうぜん", "ko": "당연"}, {"kanji": "規則", "kana": "きそく", "ko": "규칙"}, {"kanji": "停電", "kana": "ていでん", "ko": "정전"}, {"kanji": "位置", "kana": "いち", "ko": "위치"}, {"kanji": "税金", "kana": "ぜいきん", "ko": "세금"}, {"kanji": "朝食", "kana": "ちょうしょく", "ko": "조식"}, {"kanji": "姿勢", "kana": "しせい", "ko": "자세"}, {"kanji": "輸出", "kana": "ゆしゅつ", "ko": "수출"}, {"kanji": "我慢", "kana": "がまん", "ko": "참음"}, {"kanji": "教師", "kana": "きょうし", "ko": "교사"}, {"kanji": "割合", "kana": "わりあい", "ko": "비율"}, {"kanji": "健康", "kana": "けんこう", "ko": "건강"}, {"kanji": "情報", "kana": "じょうほう", "ko": "정보"}, {"kanji": "防ぐ", "kana": "ふせぐ", "ko": "막다, 방지하다"}, {"kanji": "追う", "kana": "おう", "ko": "쫓다, 따르다"}, {"kanji": "燃える", "kana": "もえる", "ko": "타다, 불타다"}, {"kanji": "許す", "kana": "ゆるす", "ko": "허락하다, 용서하다"}, {"kanji": "折る", "kana": "おる", "ko": "꺾다, 접다"}, {"kanji": "空", "kana": "から", "ko": "속이 비었음"}, {"kanji": "呼吸", "kana": "こきゅう", "ko": "호흡, 숨"}, {"kanji": "貯金", "kana": "ちょきん", "ko": "저금"}, {"kanji": "指導", "kana": "しどう", "ko": "지도"}, {"kanji": "順番", "kana": "じゅんばん", "ko": "순번, 차례"}, {"kanji": "泡", "kana": "あわ", "ko": "거품"}, {"kanji": "休養", "kana": "きゅうよう", "ko": "휴양"}, {"kanji": "経営", "kana": "けいえい", "ko": "경영"}, {"kanji": "単語", "kana": "たんご", "ko": "단어"}, {"kanji": "発表", "kana": "はっぴょう", "ko": "발표"}, {"kanji": "血液", "kana": "けつえき", "ko": "혈액"}, {"kanji": "各地", "kana": "かくち", "ko": "각지"}, {"kanji": "共通", "kana": "きょうつう", "ko": "공통"}, {"kanji": "材料", "kana": "ざいりょう", "ko": "재료"}, {"kanji": "完成", "kana": "かんせい", "ko": "완성"}, {"kanji": "期待", "kana": "きたい", "ko": "기대"}, {"kanji": "栄養", "kana": "えいよう", "ko": "영양"}, {"kanji": "複数", "kana": "ふくすう", "ko": "복수, 여러 개"}, {"kanji": "締め切り", "kana": "しめきり", "ko": "마감"}, {"kanji": "集中", "kana": "しゅうちゅう", "ko": "집중"}, {"kanji": "移動", "kana": "いどう", "ko": "이동"}, {"kanji": "癖", "kana": "くせ", "ko": "버릇"}, {"kanji": "到着", "kana": "とうちゃく", "ko": "도착"}, {"kanji": "大会", "kana": "たいかい", "ko": "대회"}, {"kanji": "食器", "kana": "しょっき", "ko": "식기"}, {"kanji": "楽器", "kana": "がっき", "ko": "악기"}, {"kanji": "検査", "kana": "けんさ", "ko": "검사"}, {"kanji": "制限", "kana": "せいげん", "ko": "제한"}, {"kanji": "振る", "kana": "ふる", "ko": "흔들다"}, {"kanji": "迷う", "kana": "まよう", "ko": "헤매다, 망설이다"}, {"kanji": "分ける", "kana": "わける", "ko": "나누다, 구분하다"}, {"kanji": "囲む", "kana": "かこむ", "ko": "둘러싸다, 에워싸다"}, {"kanji": "信じる", "kana": "しんじる", "ko": "믿다"}, {"kanji": "波", "kana": "なみ", "ko": "파도"}, {"kanji": "独身", "kana": "どくしん", "ko": "독신"}, {"kanji": "感動", "kana": "かんどう", "ko": "감동"}, {"kanji": "事情", "kana": "じじょう", "ko": "사정"}, {"kanji": "使用", "kana": "しよう", "ko": "사용"}, {"kanji": "半日", "kana": "はんにち", "ko": "반일, 한나절"}, {"kanji": "専門家", "kana": "せんもんか", "ko": "전문가"}, {"kanji": "笑顔", "kana": "えがお", "ko": "웃는 얼굴, 미소"}, {"kanji": "帰宅", "kana": "きたく", "ko": "귀가"}, {"kanji": "申請", "kana": "しんせい", "ko": "신청"}, {"kanji": "感覚", "kana": "かんかく", "ko": "감각"}, {"kanji": "坂道", "kana": "さかみち", "ko": "비탈길, 언덕길"}, {"kanji": "暗記", "kana": "あんき", "ko": "암기"}, {"kanji": "成績", "kana": "せいせき", "ko": "성적"}, {"kanji": "直接", "kana": "ちょくせつ", "ko": "직접"}, {"kanji": "平日", "kana": "へいじつ", "ko": "평일"}, {"kanji": "手段", "kana": "しゅだん", "ko": "수단"}, {"kanji": "過去", "kana": "かこ", "ko": "과거"}, {"kanji": "代金", "kana": "だいきん", "ko": "대금"}, {"kanji": "修理", "kana": "しゅうり", "ko": "수리"}, {"kanji": "物価", "kana": "ぶっか", "ko": "물가"}, {"kanji": "団体", "kana": "だんたい", "ko": "단체"}, {"kanji": "売れる", "kana": "うれる", "ko": "(잘) 팔리다"}, {"kanji": "涙", "kana": "なみだ", "ko": "눈물"}, {"kanji": "滞在", "kana": "たいざい", "ko": "체재, 체류"}, {"kanji": "比較", "kana": "ひかく", "ko": "비교"}, {"kanji": "自信", "kana": "じしん", "ko": "자신감"}, {"kanji": "通勤", "kana": "つうきん", "ko": "통근"}, {"kanji": "縮小", "kana": "しゅくしょう", "ko": "축소"}, {"kanji": "残業", "kana": "ざんぎょう", "ko": "잔업"}, {"kanji": "苦労", "kana": "くろう", "ko": "고생, 노고"}, {"kanji": "気温", "kana": "きおん", "ko": "기온"}, {"kanji": "温泉", "kana": "おんせん", "ko": "온천"}, {"kanji": "意義", "kana": "いぎ", "ko": "의의"}, {"kanji": "変化", "kana": "へんか", "ko": "변화"}, {"kanji": "記念", "kana": "きねん", "ko": "기념"}, {"kanji": "下線", "kana": "かせん", "ko": "밑줄"}, {"kanji": "身長", "kana": "しんちょう", "ko": "키, 신장"}, {"kanji": "延期", "kana": "えんき", "ko": "연기"}, {"kanji": "建設", "kana": "けんせつ", "ko": "건설"}, {"kanji": "自慢", "kana": "じまん", "ko": "자랑"}, {"kanji": "懐かしい", "kana": "なつかしい", "ko": "그립다"}, {"kanji": "悔しい", "kana": "くやしい", "ko": "분하다"}, {"kanji": "主だ", "kana": "おもだ", "ko": "주되다"}, {"kanji": "正常だ", "kana": "せいじょうだ", "ko": "정상이다"}, {"kanji": "新鮮だ", "kana": "しんせんだ", "ko": "신선하다"}, {"kanji": "商業", "kana": "しょうぎょう", "ko": "상업"}, {"kanji": "方法", "kana": "ほうほう", "ko": "방법"}, {"kanji": "特徴", "kana": "とくちょう", "ko": "특징"}, {"kanji": "制服", "kana": "せいふく", "ko": "제복, 교복"}, {"kanji": "観客", "kana": "かんきゃく", "ko": "관객"}, {"kanji": "溢れる", "kana": "あふれる", "ko": "흘러넘치다"}, {"kanji": "生える", "kana": "はえる", "ko": "나다, 돋아나다"}, {"kanji": "染み", "kana": "しみ", "ko": "얼룩"}, {"kanji": "乗車", "kana": "じょうしゃ", "ko": "승차"}, {"kanji": "欠点", "kana": "けってん", "ko": "결점"}, {"kanji": "効果", "kana": "こうか", "ko": "효과"}, {"kanji": "片方", "kana": "かたほう", "ko": "한쪽"}, {"kanji": "進歩", "kana": "しんぽ", "ko": "진보"}, {"kanji": "機会", "kana": "きかい", "ko": "기회"}, {"kanji": "部分", "kana": "ぶぶん", "ko": "부분"}, {"kanji": "往復", "kana": "おうふく", "ko": "왕복"}, {"kanji": "想像", "kana": "そうぞう", "ko": "상상"}, {"kanji": "印象", "kana": "いんしょう", "ko": "인상"}, {"kanji": "中古", "kana": "ちゅうこ", "ko": "중고"}, {"kanji": "得意だ", "kana": "とくいだ", "ko": "잘하다, 자신있다"}, {"kanji": "正直だ", "kana": "しょうじきだ", "ko": "정직하다"}, {"kanji": "単純だ", "kana": "たんじゅんだ", "ko": "단순하다"}, {"kanji": "変だ", "kana": "へんだ", "ko": "이상하다"}, {"kanji": "代表的だ", "kana": "だいひょうてきだ", "ko": "대표적이다"}, {"kanji": "訓練", "kana": "くんれん", "ko": "훈련"}, {"kanji": "通知", "kana": "つうち", "ko": "통지"}, {"kanji": "独立", "kana": "どくりつ", "ko": "독립"}, {"kanji": "配達", "kana": "はいたつ", "ko": "배달"}, {"kanji": "記録", "kana": "きろく", "ko": "기록"}, {"kanji": "演奏", "kana": "えんそう", "ko": "연주"}, {"kanji": "手術", "kana": "しゅじゅつ", "ko": "수술"}, {"kanji": "禁煙", "kana": "きんえん", "ko": "금연"}, {"kanji": "断わる", "kana": "ことわる", "ko": "거절하다"}, {"kanji": "表わす", "kana": "あらわす", "ko": "나타내다, 표현하다"}, {"kanji": "売り切れる", "kana": "うりきれる", "ko": "매진되다"}, {"kanji": "盛んだ", "kana": "さかんだ", "ko": "왕성하다, 활발하다"}, {"kanji": "主要だ", "kana": "しゅようだ", "ko": "주요하다"}, {"kanji": "退屈だ", "kana": "たいくつだ", "ko": "지루하다, 따분하다"}, {"kanji": "からから", "kana": "からから", "ko": "바싹바싹 (몹시 건조한 모양)"}, {"kanji": "さっそく", "kana": "さっそく", "ko": "즉시, 당장"}, {"kanji": "ぴったり", "kana": "ぴったり", "ko": "꼭, 딱 맞음"}, {"kanji": "しばらく", "kana": "しばらく", "ko": "잠시, 잠깐"}, {"kanji": "がっかり", "kana": "がっかり", "ko": "실망, 낙담하는 모양"}, {"kanji": "うっかり", "kana": "うっかり", "ko": "깜박, 무심코"}, {"kanji": "がらがら", "kana": "がらがら", "ko": "텅텅 (비어 있는 모양)"}, {"kanji": "まさか", "kana": "まさか", "ko": "설마"}, {"kanji": "そっと", "kana": "そっと", "ko": "살짝, 슬며시"}, {"kanji": "全く", "kana": "まったく", "ko": "완전히, (부정어를 수반하여) 전혀"}, {"kanji": "突然", "kana": "とつぜん", "ko": "돌연, 갑자기"}, {"kanji": "意外", "kana": "いがい", "ko": "의외로"}, {"kanji": "別々に", "kana": "べつべつに", "ko": "따로따로"}, {"kanji": "次第に", "kana": "しだいに", "ko": "점차"}, {"kanji": "早めに", "kana": "はやめに", "ko": "일찌감치"}, {"kanji": "今にも", "kana": "いまにも", "ko": "당장에라도, 금세"}, {"kanji": "相変わらず", "kana": "あいかわらず", "ko": "여전히"}, {"kanji": "いっぱんに", "kana": "いっぱんに", "ko": "대체로, 일반적으로"}, {"kanji": "ぜったいに", "kana": "ぜったいに", "ko": "반드시, 꼭"}, {"kanji": "列", "kana": "れつ", "ko": "열(행렬), 줄"}, {"kanji": "根", "kana": "ね", "ko": "뿌리"}, {"kanji": "向き", "kana": "むき", "ko": "방향, 방면"}, {"kanji": "右折", "kana": "うせつ", "ko": "우회전"}, {"kanji": "床", "kana": "ゆか", "ko": "마루, 바닥"}, {"kanji": "豆", "kana": "まめ", "ko": "콩"}, {"kanji": "翻訳", "kana": "ほんやく", "ko": "번역"}, {"kanji": "やり方", "kana": "やりかた", "ko": "(하는) 방법, 방식"}, {"kanji": "募集", "kana": "ぼしゅう", "ko": "모집"}, {"kanji": "支給", "kana": "しきゅう", "ko": "지급"}, {"kanji": "大量", "kana": "たいりょう", "ko": "대량"}, {"kanji": "行き先", "kana": "ゆきさき", "ko": "행선지, 목적지"}, {"kanji": "物語", "kana": "ものがたり", "ko": "이야기"}, {"kanji": "農業", "kana": "のうぎょう", "ko": "농업"}, {"kanji": "以降", "kana": "いこう", "ko": "이후"}, {"kanji": "流行", "kana": "りゅうこう", "ko": "유행"}, {"kanji": "発展", "kana": "はってん", "ko": "발전"}, {"kanji": "満足", "kana": "まんぞく", "ko": "만족"}, {"kanji": "命令", "kana": "めいれい", "ko": "명령"}, {"kanji": "両替", "kana": "りょうがえ", "ko": "환전"}, {"kanji": "預ける", "kana": "あずける", "ko": "맡기다"}, {"kanji": "扱う", "kana": "あつかう", "ko": "다루다, 취급하다"}, {"kanji": "チャレンジ", "kana": "チャレンジ", "ko": "챌린지, 도전"}, {"kanji": "ノック", "kana": "ノック", "ko": "노크"}, {"kanji": "チャンス", "kana": "チャンス", "ko": "찬스, 기회"}, {"kanji": "カバー", "kana": "カバー", "ko": "커버"}, {"kanji": "諦める", "kana": "あきらめる", "ko": "포기하다"}, {"kanji": "確かめる", "kana": "たしかめる", "ko": "확인하다"}, {"kanji": "余る", "kana": "あまる", "ko": "남다"}, {"kanji": "混ぜる", "kana": "まぜる", "ko": "섞다"}, {"kanji": "缶", "kana": "かん", "ko": "캔, 깡통"}, {"kanji": "種", "kana": "たね", "ko": "씨앗"}, {"kanji": "不満", "kana": "ふまん", "ko": "불만"}, {"kanji": "物置", "kana": "ものおき", "ko": "헛간, 창고"}, {"kanji": "騒音", "kana": "そうおん", "ko": "소음"}, {"kanji": "限界", "kana": "げんかい", "ko": "한계"}, {"kanji": "愛", "kana": "あい", "ko": "사랑"}, {"kanji": "差", "kana": "さ", "ko": "차이, 차"}, {"kanji": "故郷", "kana": "こきょう", "ko": "고향"}, {"kanji": "故郷", "kana": "ふるさと", "ko": "고향"}, {"kanji": "生", "kana": "なま", "ko": "날 것, 가공하지 않음"}, {"kanji": "直線", "kana": "ちょくせん", "ko": "직선"}, {"kanji": "請求", "kana": "せいきゅう", "ko": "청구"}, {"kanji": "食欲", "kana": "しょくよく", "ko": "식욕"}, {"kanji": "次男", "kana": "じなん", "ko": "차남"}, {"kanji": "通行", "kana": "つうこう", "ko": "통행"}, {"kanji": "冗談", "kana": "じょうだん", "ko": "농담"}, {"kanji": "主婦", "kana": "しゅふ", "ko": "주부"}, {"kanji": "歩道橋", "kana": "ほどうきょう", "ko": "육교"}, {"kanji": "空き地", "kana": "あきち", "ko": "공터"}, {"kanji": "屋外", "kana": "おくがい", "ko": "옥외"}, {"kanji": "容器", "kana": "ようき", "ko": "용기"}, {"kanji": "係り", "kana": "かかり", "ko": "담당, 담당자"}, {"kanji": "短期", "kana": "たんき", "ko": "단기"}, {"kanji": "反省", "kana": "はんせい", "ko": "반성"}, {"kanji": "強調", "kana": "きょうちょう", "ko": "강조"}, {"kanji": "不足", "kana": "ふそく", "ko": "부족"}, {"kanji": "結ぶ", "kana": "むすぶ", "ko": "매다, 묶다"}, {"kanji": "駆ける", "kana": "かける", "ko": "달리다, 뛰다"}, {"kanji": "零す", "kana": "こぼす", "ko": "쏟다, 엎지르다"}, {"kanji": "疑う", "kana": "うたがう", "ko": "의심하다"}, {"kanji": "量る", "kana": "はかる", "ko": "(무게 등을) 재다"}, {"kanji": "蓋", "kana": "ふた", "ko": "뚜껑"}, {"kanji": "針", "kana": "はり", "ko": "바늘"}, {"kanji": "許可", "kana": "きょか", "ko": "허가"}, {"kanji": "行事", "kana": "ぎょうじ", "ko": "행사"}, {"kanji": "物忘れ", "kana": "ものわすれ", "ko": "건망증"}, {"kanji": "成功", "kana": "せいこう", "ko": "성공"}, {"kanji": "国語", "kana": "こくご", "ko": "국어"}, {"kanji": "寿命", "kana": "じゅみょう", "ko": "수명"}, {"kanji": "予報", "kana": "よほう", "ko": "예보"}, {"kanji": "黒板", "kana": "こくばん", "ko": "칠판"}, {"kanji": "環境", "kana": "かんきょう", "ko": "환경"}, {"kanji": "直前", "kana": "ちょくぜん", "ko": "직전"}, {"kanji": "灰色", "kana": "はいいろ", "ko": "회색"}, {"kanji": "並木", "kana": "なみき", "ko": "가로수"}, {"kanji": "考え", "kana": "かんがえ", "ko": "생각"}, {"kanji": "送金", "kana": "そうきん", "ko": "송금"}, {"kanji": "参加", "kana": "さんか", "ko": "참가"}, {"kanji": "問い合わせ", "kana": "といあわせ", "ko": "문의"}, {"kanji": "居眠り", "kana": "いねむり", "ko": "앉아서 조는 것"}, {"kanji": "半年", "kana": "はんとし", "ko": "반년"}, {"kanji": "おしゃれ", "kana": "おしゃれ", "ko": "멋을 냄, 멋쟁이"}, {"kanji": "書留", "kana": "かきとめ", "ko": "등기우편"}, {"kanji": "研究", "kana": "けんきゅう", "ko": "연구"}, {"kanji": "本社", "kana": "ほんしゃ", "ko": "본사"}, {"kanji": "距離", "kana": "きょり", "ko": "거리"}, {"kanji": "死亡", "kana": "しぼう", "ko": "사망"}, {"kanji": "直通", "kana": "ちょくつう", "ko": "직통"}, {"kanji": "通過", "kana": "つうか", "ko": "통과, 지나감"}, {"kanji": "世の中", "kana": "よのなか", "ko": "세상"}, {"kanji": "現金", "kana": "げんきん", "ko": "현금"}, {"kanji": "キャンセル", "kana": "キャンセル", "ko": "취소"}, {"kanji": "アドバイス", "kana": "アドバイス", "ko": "어드바이스, 조언"}, {"kanji": "枯れる", "kana": "かれる", "ko": "시들다, 마르다"}, {"kanji": "しゃべる", "kana": "しゃべる", "ko": "말하다, 수다 떨다"}, {"kanji": "経つ", "kana": "たつ", "ko": "지나다, 경과하다"}, {"kanji": "模様", "kana": "もよう", "ko": "모양"}, {"kanji": "歓迎", "kana": "かんげい", "ko": "환영"}, {"kanji": "初心者", "kana": "しょしんしゃ", "ko": "초심자, 초보자"}, {"kanji": "区切る", "kana": "くぎる", "ko": "구분하다, 구획짓다"}, {"kanji": "犯人", "kana": "はんにん", "ko": "범인"}, {"kanji": "握手", "kana": "あくしゅ", "ko": "악수"}, {"kanji": "違反", "kana": "いはん", "ko": "위반"}, {"kanji": "種類", "kana": "しゅるい", "ko": "종류"}, {"kanji": "答案", "kana": "とうあん", "ko": "답안"}, {"kanji": "腰", "kana": "こし", "ko": "허리"}, {"kanji": "事務", "kana": "じむ", "ko": "사무"}, {"kanji": "税込み", "kana": "ぜいこみ", "ko": "세금 포함"}, {"kanji": "税抜き", "kana": "ぜいぬき", "ko": "세금 미포함, 세금 별도"}, {"kanji": "総合", "kana": "そうごう", "ko": "종합"}, {"kanji": "書店", "kana": "しょてん", "ko": "서점"}, {"kanji": "割引", "kana": "わりびき", "ko": "할인"}, {"kanji": "お尻", "kana": "おしり", "ko": "엉덩이"}, {"kanji": "正座", "kana": "せいざ", "ko": "정좌(무릎 꿇고 단정하게 앉음)"}, {"kanji": "舞台", "kana": "ぶたい", "ko": "무대"}, {"kanji": "言語", "kana": "げんご", "ko": "언어"}, {"kanji": "家具", "kana": "かぐ", "ko": "가구"}, {"kanji": "誕生", "kana": "たんじょう", "ko": "탄생"}, {"kanji": "イメージ", "kana": "イメージ", "ko": "이미지, 인상"}, {"kanji": "パンフレット", "kana": "パンフレット", "ko": "팜플릿, 소책자"}, {"kanji": "移る", "kana": "うつる", "ko": "옮기다, 이전하다"}, {"kanji": "離す", "kana": "はなす", "ko": "떼어내다, 분리하다"}, {"kanji": "握る", "kana": "にぎる", "ko": "잡다, 움켜쥐다"}, {"kanji": "合わせる", "kana": "あわせる", "ko": "합치다, 맞추다"}, {"kanji": "過ごす", "kana": "すごす", "ko": "지내다, 보내다"}, {"kanji": "縁", "kana": "ふち", "ko": "가장자리, 테두리"}, {"kanji": "販売", "kana": "はんばい", "ko": "판매"}, {"kanji": "給料", "kana": "きゅうりょう", "ko": "월급, 급료"}, {"kanji": "書類", "kana": "しょるい", "ko": "서류"}, {"kanji": "性質", "kana": "せいしつ", "ko": "성질"}, {"kanji": "売店", "kana": "ばいてん", "ko": "매점"}, {"kanji": "うがい", "kana": "うがい", "ko": "양치질, 가글"}, {"kanji": "迎え", "kana": "むかえ", "ko": "맞이함, 마중"}, {"kanji": "消化", "kana": "しょうか", "ko": "소화"}, {"kanji": "物理", "kana": "ぶつり", "ko": "물리"}, {"kanji": "灯台", "kana": "とうだい", "ko": "등대"}, {"kanji": "お土産", "kana": "おみやげ", "ko": "기념품, 선물"}, {"kanji": "司会", "kana": "しかい", "ko": "사회, 사회자"}, {"kanji": "統計", "kana": "とうけい", "ko": "통계"}, {"kanji": "現実", "kana": "げんじつ", "ko": "현실"}, {"kanji": "国会", "kana": "こっかい", "ko": "국회"}, {"kanji": "足跡", "kana": "あしあと", "ko": "발자취, 발자국"}, {"kanji": "子育て", "kana": "こそだて", "ko": "육아"}, {"kanji": "あくび", "kana": "あくび", "ko": "하품"}, {"kanji": "通信", "kana": "つうしん", "ko": "통신"}, {"kanji": "日時", "kana": "にちじ", "ko": "일시"}, {"kanji": "現代", "kana": "げんだい", "ko": "현대"}, {"kanji": "受取人", "kana": "うけとりにん", "ko": "수취인"}, {"kanji": "本人", "kana": "ほんにん", "ko": "본인"}, {"kanji": "医療", "kana": "いりょう", "ko": "의료"}, {"kanji": "干す", "kana": "ほす", "ko": "말리다"}, {"kanji": "組む", "kana": "くむ", "ko": "꼬다, 끼다, 짜다"}, {"kanji": "黙る", "kana": "だまる", "ko": "침묵하다, 말이 없다"}, {"kanji": "インタビュー", "kana": "インタビュー", "ko": "인터뷰"}, {"kanji": "サイズ", "kana": "サイズ", "ko": "사이즈"}, {"kanji": "見送る", "kana": "みおくる", "ko": "배웅하다"}, {"kanji": "落ち着く", "kana": "おちつく", "ko": "침착하다, 안정되다"}, {"kanji": "慰める", "kana": "なぐさめる", "ko": "위로하다"}, {"kanji": "好み", "kana": "このみ", "ko": "좋아함, 기호"}, {"kanji": "区域", "kana": "くいき", "ko": "구역"}, {"kanji": "上下", "kana": "じょうげ", "ko": "상하"}, {"kanji": "やる気", "kana": "やるき", "ko": "~할 마음, 의욕"}, {"kanji": "地下", "kana": "ちか", "ko": "지하"}, {"kanji": "学者", "kana": "がくしゃ", "ko": "학자"}, {"kanji": "筆", "kana": "ふで", "ko": "붓"}, {"kanji": "限度", "kana": "げんど", "ko": "한도"}, {"kanji": "保存", "kana": "ほぞん", "ko": "보존"}, {"kanji": "無休", "kana": "むきゅう", "ko": "무휴, 쉬지 않음"}, {"kanji": "日当たり", "kana": "ひあたり", "ko": "햇볕이 듦"}, {"kanji": "日中", "kana": "にっちゅう", "ko": "낮, 대낮"}, {"kanji": "小包", "kana": "こづつみ", "ko": "소포"}, {"kanji": "時間割り", "kana": "じかんわり", "ko": "시간표"}, {"kanji": "違い", "kana": "ちがい", "ko": "차이, 다름"}, {"kanji": "送別会", "kana": "そうべつかい", "ko": "송별회"}, {"kanji": "知り合い", "kana": "しりあい", "ko": "지인"}, {"kanji": "感情", "kana": "かんじょう", "ko": "감정"}, {"kanji": "味見", "kana": "あじみ", "ko": "맛을 봄"}, {"kanji": "通帳", "kana": "つうちょう", "ko": "통장"}, {"kanji": "離婚", "kana": "りこん", "ko": "이혼"}, {"kanji": "知らせ", "kana": "しらせ", "ko": "통지, 안내"}, {"kanji": "拍手", "kana": "はくしゅ", "ko": "박수"}, {"kanji": "蛇口", "kana": "じゃぐち", "ko": "수도꼭지"}, {"kanji": "相続", "kana": "そうぞく", "ko": "상속"}, {"kanji": "エネルギー", "kana": "エネルギー", "ko": "에너지"}, {"kanji": "青春", "kana": "せいしゅん", "ko": "청춘"}, {"kanji": "スケジュール", "kana": "スケジュール", "ko": "스케줄, 일정"}, {"kanji": "通り過ぎる", "kana": "とおりすぎる", "ko": "지나가다"}, {"kanji": "飽きる", "kana": "あきる", "ko": "싫증나다, 질리다"}, {"kanji": "牛", "kana": "うし", "ko": "소"}, {"kanji": "迷子", "kana": "まいご", "ko": "미아"}, {"kanji": "箸", "kana": "はし", "ko": "젓가락"}, {"kanji": "マナー", "kana": "マナー", "ko": "매너"}, {"kanji": "恋", "kana": "こい", "ko": "사랑"}, {"kanji": "踏み切り", "kana": "ふみきり", "ko": "건널목"}, {"kanji": "区間", "kana": "くかん", "ko": "구간"}, {"kanji": "感心", "kana": "かんしん", "ko": "감탄"}, {"kanji": "無地", "kana": "むじ", "ko": "민무늬"}, {"kanji": "通訳", "kana": "つうやく", "ko": "통역"}, {"kanji": "毎度", "kana": "まいど", "ko": "매번, 항상"}, {"kanji": "日程", "kana": "にってい", "ko": "일정"}, {"kanji": "部品", "kana": "ぶひん", "ko": "부품"}, {"kanji": "日本酒", "kana": "にほんしゅ", "ko": "일본술"}, {"kanji": "私立", "kana": "しりつ", "ko": "사립"}, {"kanji": "条件", "kana": "じょうけん", "ko": "조건"}, {"kanji": "理想", "kana": "りそう", "ko": "이상"}, {"kanji": "学習", "kana": "がくしゅう", "ko": "학습"}, {"kanji": "博物館", "kana": "はくぶつかん", "ko": "박물관"}, {"kanji": "四季", "kana": "しき", "ko": "사계절"}, {"kanji": "日帰り", "kana": "ひがえり", "ko": "당일치기"}, {"kanji": "道路", "kana": "どうろ", "ko": "도로"}, {"kanji": "送料", "kana": "そうりょう", "ko": "배송료"}, {"kanji": "普段", "kana": "ふだん", "ko": "평소, 평상시"}, {"kanji": "勇気", "kana": "ゆうき", "ko": "용기"}, {"kanji": "地下水", "kana": "ちかすい", "ko": "지하수"}, {"kanji": "ユーモア", "kana": "ユーモア", "ko": "유머"}, {"kanji": "戦う", "kana": "たたかう", "ko": "싸우다"}, {"kanji": "成人", "kana": "せいじん", "ko": "성인"}, {"kanji": "困る", "kana": "こまる", "ko": "곤란하다"}, {"kanji": "土", "kana": "つち", "ko": "흙"}, {"kanji": "量", "kana": "りょう", "ko": "양"}, {"kanji": "近道", "kana": "ちかみち", "ko": "지름길"}, {"kanji": "柱", "kana": "はしら", "ko": "기둥"}, {"kanji": "編む", "kana": "あむ", "ko": "짜다, 뜨개질하다"}, {"kanji": "速達", "kana": "そくたつ", "ko": "속달"}, {"kanji": "感想", "kana": "かんそう", "ko": "감상"}, {"kanji": "負け", "kana": "まけ", "ko": "패배"}, {"kanji": "留学", "kana": "りゅうがく", "ko": "유학"}, {"kanji": "資料", "kana": "しりょう", "ko": "자료"}, {"kanji": "振り込み", "kana": "ふりこみ", "ko": "송금, 이체"}, {"kanji": "確認", "kana": "かくにん", "ko": "확인"}, {"kanji": "当たり前", "kana": "あたりまえ", "ko": "당연함"}, {"kanji": "遠回り", "kana": "とおまわり", "ko": "우회, 멀리 돌아감"}, {"kanji": "正午", "kana": "しょうご", "ko": "정오"}, {"kanji": "思い出", "kana": "おもいで", "ko": "추억"}, {"kanji": "社説", "kana": "しゃせつ", "ko": "사설"}, {"kanji": "虫歯", "kana": "むしば", "ko": "충치"}, {"kanji": "被害", "kana": "ひがい", "ko": "피해"}, {"kanji": "拡大", "kana": "かくだい", "ko": "확대"}, {"kanji": "悪化", "kana": "あっか", "ko": "악화"}, {"kanji": "入場", "kana": "にゅうじょう", "ko": "입장"}, {"kanji": "清掃", "kana": "せいそう", "ko": "청소"}, {"kanji": "カタログ", "kana": "カタログ", "ko": "카탈로그"}, {"kanji": "温める", "kana": "あたためる", "ko": "따뜻하게 하다, 데우다"}, {"kanji": "友情", "kana": "ゆうじょう", "ko": "우정"}, {"kanji": "リサイクル", "kana": "リサイクル", "ko": "리사이클, 재활용"}, {"kanji": "話しかける", "kana": "はなしかける", "ko": "말을 걸다"}, {"kanji": "くしゃみ", "kana": "くしゃみ", "ko": "재채기"}, {"kanji": "効く", "kana": "きく", "ko": "효과가 있다, 듣다"}, {"kanji": "惜しい", "kana": "おしい", "ko": "아깝다, 아쉽다"}, {"kanji": "怒鳴る", "kana": "どなる", "ko": "고함지르다"}, {"kanji": "詳しい", "kana": "くわしい", "ko": "자세하다, 상세하다"}, {"kanji": "草臥れる", "kana": "くたびれる", "ko": "지치다, 녹초가 되다"}, {"kanji": "賢い", "kana": "かしこい", "ko": "현명하다, 영리하다"}, {"kanji": "恋人", "kana": "こいびと", "ko": "연인, 애인"}, {"kanji": "恐ろしい", "kana": "おそろしい", "ko": "두렵다, 무섭다, 겁나다"}, {"kanji": "しつこい", "kana": "しつこい", "ko": "끈질기다"}, {"kanji": "幼い", "kana": "おさない", "ko": "어리다"}, {"kanji": "きつい", "kana": "きつい", "ko": "힘들다, 꼭 끼다, (정도가) 심하다"}, {"kanji": "貧しい", "kana": "まずしい", "ko": "가난하다"}, {"kanji": "眩しい", "kana": "まぶしい", "ko": "눈부시다"}, {"kanji": "残念だ", "kana": "ざんねんだ", "ko": "유감스럽다, 아쉽다"}, {"kanji": "羨ましい", "kana": "うらやましい", "ko": "부럽다"}, {"kanji": "楽だ", "kana": "らくだ", "ko": "편하다"}, {"kanji": "恋しい", "kana": "こいしい", "ko": "그립다"}, {"kanji": "上品だ", "kana": "じょうひんだ", "ko": "고상하다, 품위있다"}, {"kanji": "緩い", "kana": "ゆるい", "ko": "느슨하다, 완만하다"}, {"kanji": "清潔だ", "kana": "せいけつだ", "ko": "청결하다"}, {"kanji": "なだらかだ", "kana": "なだらかだ", "ko": "완만하다"}, {"kanji": "たっぷり", "kana": "たっぷり", "ko": "듬뿍, 충분히"}, {"kanji": "いきいき", "kana": "いきいき", "ko": "생기있게, 활기차게"}, {"kanji": "ちゃんと", "kana": "ちゃんと", "ko": "단정하게, 확실히"}, {"kanji": "そっくりだ", "kana": "そっくりだ", "ko": "쏙 빼어 닮다"}, {"kanji": "ざっと", "kana": "ざっと", "ko": "대충, 대략"}, {"kanji": "凡そ", "kana": "およそ", "ko": "대략, 약, 무릇"}, {"kanji": "ぶらぶら", "kana": "ぶらぶら", "ko": "어슬렁어슬렁, 빈둥빈둥"}, {"kanji": "平凡だ", "kana": "へいぼんだ", "ko": "평범하다"}, {"kanji": "一般的だ", "kana": "いっぱんてきだ", "ko": "일반적이다"}, {"kanji": "自動的だ", "kana": "じどうてきだ", "ko": "자동적이다"}, {"kanji": "幸せだ", "kana": "しあわせだ", "ko": "행복하다"}, {"kanji": "様々だ", "kana": "さまざまだ", "ko": "다양하다"}, {"kanji": "地味だ", "kana": "じみだ", "ko": "수수하다, 소박하다"}, {"kanji": "のろのろ", "kana": "のろのろ", "ko": "느릿느릿, 꾸물꾸물"}, {"kanji": "すでに", "kana": "すでに", "ko": "벌써, 이미"}, {"kanji": "ついに", "kana": "ついに", "ko": "드디어, 끝내"}, {"kanji": "きちんと", "kana": "きちんと", "ko": "말끔하게, 제대로"}, {"kanji": "思わず", "kana": "おもわず", "ko": "무심코, 엉겁결에"}, {"kanji": "はきはき", "kana": "はきはき", "ko": "시원시원, 또박또박"}, {"kanji": "たまたま", "kana": "たまたま", "ko": "가끔, 우연히"}, {"kanji": "ぎりぎり", "kana": "ぎりぎり", "ko": "아슬아슬, 빠듯하게"}, {"kanji": "案外", "kana": "あんがい", "ko": "뜻밖임, 의외로"}, {"kanji": "ぐっすり", "kana": "ぐっすり", "ko": "푹 (깊이 잠든 모양)"}, {"kanji": "あっという間", "kana": "あっというま", "ko": "눈 깜짝할 사이에"}, {"kanji": "しいんと", "kana": "しいんと", "ko": "쥐 죽은 듯이 조용하게"}, {"kanji": "一気に", "kana": "いっきに", "ko": "단숨에"}, {"kanji": "常に", "kana": "つねに", "ko": "항상"}, {"kanji": "必ずしも", "kana": "かならずしも", "ko": "반드시"}, {"kanji": "さっさと", "kana": "さっさと", "ko": "서둘러"}, {"kanji": "次々", "kana": "つぎつぎ", "ko": "차례차례, 잇달아"}, {"kanji": "少なくとも", "kana": "すくなくとも", "ko": "적어도"}, {"kanji": "いつの間に", "kana": "いつのまに", "ko": "어느새인가"}, {"kanji": "行き成り", "kana": "いきなり", "ko": "갑자기"}, {"kanji": "印", "kana": "しるし", "ko": "표시, 마크"}, {"kanji": "いっせいに", "kana": "いっせいに", "ko": "일제히"}, {"kanji": "街", "kana": "まち", "ko": "시가지, 거리"}, {"kanji": "畑", "kana": "はたけ", "ko": "밭"}, {"kanji": "飛行", "kana": "ひこう", "ko": "비행"}, {"kanji": "車輪", "kana": "しゃりん", "ko": "차바퀴"}, {"kanji": "取引", "kana": "とりひき", "ko": "거래"}, {"kanji": "混乱", "kana": "こんらん", "ko": "혼란"}, {"kanji": "お礼", "kana": "おれい", "ko": "사례"}, {"kanji": "死後", "kana": "しご", "ko": "사후(죽은 후)"}, {"kanji": "成長", "kana": "せいちょう", "ko": "성장"}, {"kanji": "幸運", "kana": "こううん", "ko": "행운"}, {"kanji": "青年", "kana": "せいねん", "ko": "청년"}, {"kanji": "速度", "kana": "そくど", "ko": "속도"}, {"kanji": "包み", "kana": "つつみ", "ko": "꾸러미, 보따리"}, {"kanji": "周囲", "kana": "しゅうい", "ko": "주위, 주위 사람들"}, {"kanji": "入浴", "kana": "にゅうよく", "ko": "입욕, 목욕을 함"}, {"kanji": "事件", "kana": "じけん", "ko": "사건"}, {"kanji": "集まり", "kana": "あつまり", "ko": "모임"}, {"kanji": "進学", "kana": "しんがく", "ko": "진학"}, {"kanji": "遅刻", "kana": "ちこく", "ko": "지각"}, {"kanji": "息子", "kana": "むすこ", "ko": "아들"}, {"kanji": "今後", "kana": "こんご", "ko": "차후, 앞으로"}, {"kanji": "雰囲気", "kana": "ふんいき", "ko": "분위기"}, {"kanji": "常識", "kana": "じょうしき", "ko": "상식"}, {"kanji": "アレルギー", "kana": "アレルギー", "ko": "알레르기"}, {"kanji": "学費", "kana": "がくひ", "ko": "학비"}, {"kanji": "ストーリー", "kana": "ストーリー", "ko": "스토리, 이야기"}, {"kanji": "郵送", "kana": "ゆうそう", "ko": "우송"}, {"kanji": "上司", "kana": "じょうし", "ko": "상사"}, {"kanji": "工学", "kana": "こうがく", "ko": "공학"}, {"kanji": "加える", "kana": "くわえる", "ko": "추가하다"}, {"kanji": "梅", "kana": "うめ", "ko": "매화, 매실"}, {"kanji": "慌てる", "kana": "あわてる", "ko": "당황하다, 허둥대다"}, {"kanji": "鶏", "kana": "にわとり", "ko": "닭"}, {"kanji": "美人", "kana": "びじん", "ko": "미인"}, {"kanji": "幅", "kana": "はば", "ko": "폭, 너비"}, {"kanji": "奪う", "kana": "うばう", "ko": "빼앗다"}, {"kanji": "上旬", "kana": "じょうじゅん", "ko": "상순, 초순"}, {"kanji": "提案", "kana": "ていあん", "ko": "제안"}, {"kanji": "やり直す", "kana": "やりなおす", "ko": "다시하다"}, {"kanji": "特色", "kana": "とくしょく", "ko": "특색"}, {"kanji": "読書", "kana": "どくしょ", "ko": "독서"}, {"kanji": "測量", "kana": "そくりょう", "ko": "측량"}, {"kanji": "無線", "kana": "むせん", "ko": "무선"}, {"kanji": "知人", "kana": "ちじん", "ko": "지인"}, {"kanji": "合格", "kana": "ごうかく", "ko": "합격"}, {"kanji": "入力", "kana": "にゅうりょく", "ko": "입력"}, {"kanji": "完了", "kana": "かんりょう", "ko": "완료"}, {"kanji": "最高", "kana": "さいこう", "ko": "최고"}, {"kanji": "地方", "kana": "ちほう", "ko": "지방"}, {"kanji": "用途", "kana": "ようと", "ko": "용도"}, {"kanji": "働き", "kana": "はたらき", "ko": "일, 효능"}, {"kanji": "間違い", "kana": "まちがい", "ko": "실수, 오류"}, {"kanji": "美術", "kana": "びじゅつ", "ko": "미술"}, {"kanji": "住居", "kana": "じゅうきょ", "ko": "주거"}, {"kanji": "乾杯", "kana": "かんぱい", "ko": "건배"}, {"kanji": "身に付ける", "kana": "みにつける", "ko": "익히다, 습득하다"}, {"kanji": "剥く", "kana": "むく", "ko": "(껍질 등을) 벗기다"}, {"kanji": "売り上げ", "kana": "うりあげ", "ko": "매상, 매출"}, {"kanji": "延ばす", "kana": "のばす", "ko": "연장하다, 연기하다"}, {"kanji": "隠す", "kana": "かくす", "ko": "감추다, 숨기다"}, {"kanji": "測定", "kana": "そくてい", "ko": "측정"}, {"kanji": "ダイエット", "kana": "ダイエット", "ko": "다이어트"}, {"kanji": "溺れる", "kana": "おぼれる", "ko": "물에 빠지다"}, {"kanji": "本物", "kana": "ほんもの", "ko": "진짜, 진품"}, {"kanji": "油", "kana": "あぶら", "ko": "기름"}, {"kanji": "溜める", "kana": "ためる", "ko": "모으다, 담다"}, {"kanji": "待ち合わせ", "kana": "まちあわせ", "ko": "(때와 장소를 미리 정하고) 만나기로 약속함"}, {"kanji": "インスタント", "kana": "インスタント", "ko": "인스턴트"}, {"kanji": "生年月日", "kana": "せいねんがっぴ", "ko": "생년월일"}, {"kanji": "袖", "kana": "そで", "ko": "소매"}, {"kanji": "文房具", "kana": "ぶんぼうぐ", "ko": "문방구, 문구"}, {"kanji": "用事", "kana": "ようじ", "ko": "용건, 용무"}, {"kanji": "製品", "kana": "せいひん", "ko": "제품"}, {"kanji": "街角", "kana": "まちかど", "ko": "길모퉁이, 길거리"}, {"kanji": "人気", "kana": "にんき", "ko": "인기"}, {"kanji": "下り", "kana": "くだり", "ko": "내려감, 하행"}, {"kanji": "筆記", "kana": "ひっき", "ko": "필기"}, {"kanji": "特売", "kana": "とくばい", "ko": "특매, 특가판매"}, {"kanji": "格安", "kana": "かくやす", "ko": "저렴함, 값이 쌈"}, {"kanji": "雨戸", "kana": "あまど", "ko": "덧문"}, {"kanji": "学問", "kana": "がくもん", "ko": "학문"}, {"kanji": "政治", "kana": "せいじ", "ko": "정치"}, {"kanji": "育児", "kana": "いくじ", "ko": "육아"}, {"kanji": "夕日", "kana": "ゆうひ", "ko": "석양"}, {"kanji": "祭日", "kana": "さいじつ", "ko": "공휴일"}, {"kanji": "重視", "kana": "じゅうし", "ko": "중시"}, {"kanji": "高級", "kana": "こうきゅう", "ko": "고급"}, {"kanji": "呼び掛ける", "kana": "よびかける", "ko": "호소하다"}, {"kanji": "口紅", "kana": "くちべに", "ko": "립스틱"}, {"kanji": "履歴書", "kana": "りれきしょ", "ko": "이력서"}, {"kanji": "アンケート", "kana": "アンケート", "ko": "앙케트, 설문조사"}, {"kanji": "目下", "kana": "めした", "ko": "손아랫사람"}, {"kanji": "記事", "kana": "きじ", "ko": "기사"}, {"kanji": "帰国", "kana": "きこく", "ko": "귀국"}, {"kanji": "留守番", "kana": "るすばん", "ko": "집을 지킴, 집을 지키는 사람"}, {"kanji": "売り切れ", "kana": "うりきれ", "ko": "품절, 매진"}, {"kanji": "明ける", "kana": "あける", "ko": "날이 밝다, 기간이 끝나다"}, {"kanji": "打付ける", "kana": "ぶつける", "ko": "부딪치다"}, {"kanji": "咳", "kana": "せき", "ko": "기침"}, {"kanji": "発車", "kana": "はっしゃ", "ko": "발차(자동차, 기차, 전동차 따위가 떠남)"}, {"kanji": "示す", "kana": "しめす", "ko": "나타내다, 보이다"}, {"kanji": "胸", "kana": "むね", "ko": "가슴"}, {"kanji": "カラー", "kana": "カラー", "ko": "컬러"}, {"kanji": "平行", "kana": "へいこう", "ko": "평행"}, {"kanji": "支社", "kana": "ししゃ", "ko": "지사"}, {"kanji": "体育", "kana": "たいいく", "ko": "체육"}, {"kanji": "人間", "kana": "にんげん", "ko": "인간"}, {"kanji": "学力", "kana": "がくりょく", "ko": "학력"}, {"kanji": "最低", "kana": "さいてい", "ko": "최저"}, {"kanji": "中央", "kana": "ちゅうおう", "ko": "중앙"}, {"kanji": "運河", "kana": "うんが", "ko": "운하"}, {"kanji": "区別", "kana": "くべつ", "ko": "구별"}, {"kanji": "郵便", "kana": "ゆうびん", "ko": "우편"}, {"kanji": "商店", "kana": "しょうてん", "ko": "상점"}, {"kanji": "正門", "kana": "せいもん", "ko": "정문"}, {"kanji": "例外", "kana": "れいがい", "ko": "예외"}, {"kanji": "人種", "kana": "じんしゅ", "ko": "인종"}, {"kanji": "発想", "kana": "はっそう", "ko": "발상"}, {"kanji": "日付", "kana": "ひづけ", "ko": "날짜, 일자"}, {"kanji": "就職", "kana": "しゅうしょく", "ko": "취직"}, {"kanji": "診察", "kana": "しんさつ", "ko": "진찰"}, {"kanji": "時刻表", "kana": "じこくひょう", "ko": "시간표"}, {"kanji": "ストレス", "kana": "ストレス", "ko": "스트레스"}, {"kanji": "温度", "kana": "おんど", "ko": "온도"}, {"kanji": "症状", "kana": "しょうじょう", "ko": "증상"}, {"kanji": "市場", "kana": "いちば", "ko": "시장"}, {"kanji": "抜く", "kana": "ぬく", "ko": "뽑다, 빼다"}, {"kanji": "気体", "kana": "きたい", "ko": "기체"}, {"kanji": "畳む", "kana": "たたむ", "ko": "접다, 개다"}, {"kanji": "暮らし", "kana": "くらし", "ko": "생활"}, {"kanji": "下水", "kana": "げすい", "ko": "하수, 하수도"}, {"kanji": "夕焼け", "kana": "ゆうやけ", "ko": "저녁놀"}, {"kanji": "再生", "kana": "さいせい", "ko": "재생"}, {"kanji": "キャンパス", "kana": "キャンパス", "ko": "캠퍼스"}, {"kanji": "学ぶ", "kana": "まなぶ", "ko": "배우다"}, {"kanji": "収入", "kana": "しゅうにゅう", "ko": "수입"}, {"kanji": "平和", "kana": "へいわ", "ko": "평화"}, {"kanji": "発達", "kana": "はったつ", "ko": "발달"}, {"kanji": "定期", "kana": "ていき", "ko": "정기"}, {"kanji": "自習", "kana": "じしゅう", "ko": "자습"}, {"kanji": "運賃", "kana": "うんちん", "ko": "운임"}, {"kanji": "発電", "kana": "はつでん", "ko": "발전(전기를 일으킴)"}, {"kanji": "冷凍", "kana": "れいとう", "ko": "냉동"}, {"kanji": "引っ越し", "kana": "ひっこし", "ko": "이사"}, {"kanji": "採点", "kana": "さいてん", "ko": "채점"}, {"kanji": "値上げ", "kana": "ねあげ", "ko": "가격인상, 값을 올림"}, {"kanji": "米国", "kana": "べいこく", "ko": "미국"}, {"kanji": "人生", "kana": "じんせい", "ko": "인생"}, {"kanji": "祭り", "kana": "まつり", "ko": "축제"}, {"kanji": "喫煙", "kana": "きつえん", "ko": "흡연"}, {"kanji": "逆", "kana": "ぎゃく", "ko": "반대, 거꾸로임"}, {"kanji": "体温", "kana": "たいおん", "ko": "체온"}, {"kanji": "移す", "kana": "うつす", "ko": "옮기다"}, {"kanji": "トレーニング", "kana": "トレーニング", "ko": "트레이닝, 훈련"}, {"kanji": "交際", "kana": "こうさい", "ko": "교제"}, {"kanji": "責任", "kana": "せきにん", "ko": "책임"}, {"kanji": "左折", "kana": "させつ", "ko": "좌회전"}, {"kanji": "減る", "kana": "へる", "ko": "줄다, 닳다"}, {"kanji": "中間", "kana": "ちゅうかん", "ko": "중간"}, {"kanji": "都市", "kana": "とし", "ko": "도시"}, {"kanji": "登山", "kana": "とざん", "ko": "등산"}, {"kanji": "重ねる", "kana": "かさねる", "ko": "포개다, 쌓아올리다, 거듭하다"}, {"kanji": "パーセント", "kana": "パーセント", "ko": "퍼센트"}, {"kanji": "怒り", "kana": "いかり", "ko": "분노"}, {"kanji": "停車", "kana": "ていしゃ", "ko": "정차"}, {"kanji": "年上", "kana": "としうえ", "ko": "연상"}, {"kanji": "真似", "kana": "まね", "ko": "흉내"}, {"kanji": "才能", "kana": "さいのう", "ko": "재능"}, {"kanji": "記入", "kana": "きにゅう", "ko": "기입"}, {"kanji": "長所", "kana": "ちょうしょ", "ko": "장점"}, {"kanji": "対策", "kana": "たいさく", "ko": "대책"}, {"kanji": "人々", "kana": "ひとびと", "ko": "사람들"}, {"kanji": "繰り返し", "kana": "くりかえし", "ko": "반복"}, {"kanji": "貸し出し", "kana": "かしだし", "ko": "대출"}, {"kanji": "連休", "kana": "れんきゅう", "ko": "연휴"}, {"kanji": "発売", "kana": "はつばい", "ko": "발매"}, {"kanji": "録音", "kana": "ろくおん", "ko": "녹음"}, {"kanji": "次女", "kana": "じじょ", "ko": "차녀"}, {"kanji": "火災", "kana": "かさい", "ko": "화재"}, {"kanji": "提出", "kana": "ていしゅつ", "ko": "제출"}, {"kanji": "親戚", "kana": "しんせき", "ko": "친척"}, {"kanji": "中級", "kana": "ちゅうきゅう", "ko": "중급"}, {"kanji": "名刺", "kana": "めいし", "ko": "명함"}, {"kanji": "高速道路", "kana": "こうそくどうろ", "ko": "고속도로"}, {"kanji": "直後", "kana": "ちょくご", "ko": "직후"}, {"kanji": "石油", "kana": "せきゆ", "ko": "석유"}, {"kanji": "周辺", "kana": "しゅうへん", "ko": "주변"}, {"kanji": "変更", "kana": "へんこう", "ko": "변경"}, {"kanji": "名作", "kana": "めいさく", "ko": "명작"}, {"kanji": "値下げ", "kana": "ねさげ", "ko": "가격인하"}, {"kanji": "頼る", "kana": "たよる", "ko": "의지하다"}, {"kanji": "事前", "kana": "じぜん", "ko": "사전(일이 일어나기 전)"}, {"kanji": "溜まる", "kana": "たまる", "ko": "쌓이다, 모이다"}, {"kanji": "職業", "kana": "しょくぎょう", "ko": "직업"}, {"kanji": "深夜", "kana": "しんや", "ko": "심야"}, {"kanji": "配る", "kana": "くばる", "ko": "나누어주다"}, {"kanji": "法則", "kana": "ほうそく", "ko": "법칙"}, {"kanji": "ストップ", "kana": "ストップ", "ko": "정지, 멈춤"}, {"kanji": "発明", "kana": "はつめい", "ko": "발명"}, {"kanji": "名人", "kana": "めいじん", "ko": "명인"}, {"kanji": "伝染", "kana": "でんせん", "ko": "전염"}, {"kanji": "商売", "kana": "しょうばい", "ko": "장사"}, {"kanji": "詩人", "kana": "しじん", "ko": "시인"}, {"kanji": "パスポート", "kana": "パスポート", "ko": "여권"}, {"kanji": "住民", "kana": "じゅうみん", "ko": "주민"}, {"kanji": "芸術", "kana": "げいじゅつ", "ko": "예술"}, {"kanji": "休暇", "kana": "きゅうか", "ko": "휴가"}, {"kanji": "夜明け", "kana": "よあけ", "ko": "새벽"}, {"kanji": "携帯", "kana": "けいたい", "ko": "휴대"}, {"kanji": "お年寄り", "kana": "おとしより", "ko": "노인"}, {"kanji": "会員", "kana": "かいいん", "ko": "회원"}, {"kanji": "昼寝", "kana": "ひるね", "ko": "낮잠"}, {"kanji": "河川", "kana": "かせん", "ko": "하천"}, {"kanji": "職場", "kana": "しょくば", "ko": "직장"}, {"kanji": "体重", "kana": "たいじゅう", "ko": "체중"}, {"kanji": "永遠", "kana": "えいえん", "ko": "영원"}, {"kanji": "替える", "kana": "かえる", "ko": "바꾸다, 교체하다"}, {"kanji": "録画", "kana": "ろくが", "ko": "녹화"}, {"kanji": "弁護士", "kana": "べんごし", "ko": "변호사"}, {"kanji": "縛る", "kana": "しばる", "ko": "묶다"}, {"kanji": "丸", "kana": "まる", "ko": "동그라미"}, {"kanji": "出入り", "kana": "でいり", "ko": "출입"}, {"kanji": "編集", "kana": "へんしゅう", "ko": "편집"}, {"kanji": "土地", "kana": "とち", "ko": "토지, 땅"}, {"kanji": "仲", "kana": "なか", "ko": "(사람 간의) 사이"}, {"kanji": "絵画", "kana": "かいが", "ko": "회화, 그림"}, {"kanji": "時速", "kana": "じそく", "ko": "시속"}, {"kanji": "回す", "kana": "まわす", "ko": "돌리다"}, {"kanji": "路面", "kana": "ろめん", "ko": "노면"}, {"kanji": "作業", "kana": "さぎょう", "ko": "작업"}, {"kanji": "選挙", "kana": "せんきょ", "ko": "선거"}, {"kanji": "退職", "kana": "たいしょく", "ko": "퇴직"}, {"kanji": "勢い", "kana": "いきおい", "ko": "기세"}, {"kanji": "味方", "kana": "みかた", "ko": "아군"}, {"kanji": "報告", "kana": "ほうこく", "ko": "보고"}, {"kanji": "年賀状", "kana": "ねんがじょう", "ko": "연하장"}, {"kanji": "休業", "kana": "きゅうぎょう", "ko": "휴업"}, {"kanji": "大使館", "kana": "たいしかん", "ko": "대사관"}, {"kanji": "注射", "kana": "ちゅうしゃ", "ko": "주사"}, {"kanji": "迷惑", "kana": "めいわく", "ko": "폐, 성가심, 귀찮음"}, {"kanji": "要求", "kana": "ようきゅう", "ko": "요구"}, {"kanji": "消防", "kana": "しょうぼう", "ko": "소방"}, {"kanji": "熱中", "kana": "ねっちゅう", "ko": "열중"}, {"kanji": "課題", "kana": "かだい", "ko": "과제"}, {"kanji": "態度", "kana": "たいど", "ko": "태도"}, {"kanji": "プラン", "kana": "プラン", "ko": "플랜, 계획"}, {"kanji": "中旬", "kana": "ちゅうじゅん", "ko": "중순"}, {"kanji": "徒歩", "kana": "とほ", "ko": "도보"}, {"kanji": "出来事", "kana": "できごと", "ko": "사건, 생긴 일"}, {"kanji": "引き受ける", "kana": "ひきうける", "ko": "떠맡다, 받아들이다"}, {"kanji": "味わう", "kana": "あじわう", "ko": "맛보다"}, {"kanji": "マイナス", "kana": "マイナス", "ko": "마이너스"}, {"kanji": "毛糸", "kana": "けいと", "ko": "털실"}, {"kanji": "茹でる", "kana": "ゆでる", "ko": "삶다, 데치다"}, {"kanji": "若々しい", "kana": "わかわかしい", "ko": "젊다, 미숙하다"}, {"kanji": "頼もしい", "kana": "たのもしい", "ko": "믿음직하다"}, {"kanji": "蒸し暑い", "kana": "むしあつい", "ko": "무덥다"}, {"kanji": "ずうずうしい", "kana": "ずうずうしい", "ko": "뻔뻔스럽다"}, {"kanji": "申し訳ない", "kana": "もうしわけない", "ko": "미안하다"}, {"kanji": "怪しい", "kana": "あやしい", "ko": "수상하다"}, {"kanji": "とんでもない", "kana": "とんでもない", "ko": "터무니없다, 천만에"}, {"kanji": "やむを得ない", "kana": "やむをえない", "ko": "어쩔 수 없다"}, {"kanji": "勇ましい", "kana": "いさましい", "ko": "용맹스럽다, 시원시원하다"}, {"kanji": "喧しい", "kana": "やかましい", "ko": "시끄럽다"}, {"kanji": "薄暗い", "kana": "うすぐらい", "ko": "좀 어둡다, 어둑어둑하다"}, {"kanji": "醜い", "kana": "みにくい", "ko": "못생기다, 추하다"}, {"kanji": "激しい", "kana": "はげしい", "ko": "격렬하다, 정도가 심하다"}, {"kanji": "曲げる", "kana": "まげる", "ko": "구부리다, 굽히다"}, {"kanji": "もったいない", "kana": "もったいない", "ko": "아깝다"}, {"kanji": "面倒だ", "kana": "めんどうだ", "ko": "번거롭다, 귀찮다"}, {"kanji": "適当だ", "kana": "てきとうだ", "ko": "적당하다"}, {"kanji": "そそっかしい", "kana": "そそっかしい", "ko": "덜렁대다, 경솔하다"}, {"kanji": "熱心だ", "kana": "ねっしんだ", "ko": "열심이다"}, {"kanji": "下品だ", "kana": "げひんだ", "ko": "천박하다, 상스럽다"}, {"kanji": "明確だ", "kana": "めいかくだ", "ko": "명확하다"}, {"kanji": "険しい", "kana": "けわしい", "ko": "험하다"}, {"kanji": "けちだ", "kana": "けちだ", "ko": "인색하다"}, {"kanji": "下らない", "kana": "くだらない", "ko": "시시하다, 하찮다"}, {"kanji": "明白だ", "kana": "めいはくだ", "ko": "명백하다"}, {"kanji": "夢中だ", "kana": "むちゅうだ", "ko": "열중하다"}, {"kanji": "基本的だ", "kana": "きほんてきだ", "ko": "기본적이다"}, {"kanji": "利口だ", "kana": "りこうだ", "ko": "영리하다, 똑똑하다"}, {"kanji": "意地悪だ", "kana": "いじわるだ", "ko": "심술궂다"}, {"kanji": "安易だ", "kana": "あんいだ", "ko": "안이하다"}, {"kanji": "明らかだ", "kana": "あきらかだ", "ko": "분명하다, 명백하다"}, {"kanji": "のんびり", "kana": "のんびり", "ko": "한가롭게, 여유롭게"}, {"kanji": "いらいら", "kana": "いらいら", "ko": "초조한 모양"}, {"kanji": "ばったり", "kana": "ばったり", "ko": "딱, 뚝, 우연히"}, {"kanji": "徐々に", "kana": "じょじょに", "ko": "서서히"}, {"kanji": "まごまご", "kana": "まごまご", "ko": "우물쭈물"}, {"kanji": "冷静だ", "kana": "れいせいだ", "ko": "냉정하다, 침착하다"}, {"kanji": "ぎっしり", "kana": "ぎっしり", "ko": "가득, 잔뜩"}, {"kanji": "こっそり", "kana": "こっそり", "ko": "몰래, 살짝"}, {"kanji": "ながなが", "kana": "ながなが", "ko": "오랫동안, 길게"}, {"kanji": "続々", "kana": "ぞくぞく", "ko": "속속, 잇달아"}, {"kanji": "ぶつぶつ", "kana": "ぶつぶつ", "ko": "투덜투덜"}, {"kanji": "ぴかぴか", "kana": "ぴかぴか", "ko": "반짝반짝"}, {"kanji": "同時に", "kana": "どうじに", "ko": "동시에"}, {"kanji": "最も", "kana": "もっとも", "ko": "가장"}, {"kanji": "ごろごろ", "kana": "ごろごろ", "ko": "뒹굴뒹굴, 데굴데굴"}, {"kanji": "にっこり", "kana": "にっこり", "ko": "생긋, 방긋"}, {"kanji": "相当", "kana": "そうとう", "ko": "상당히"}, {"kanji": "じっと", "kana": "じっと", "ko": "가만히, 꾹"}, {"kanji": "ほっと", "kana": "ほっと", "ko": "후유 (안심하는 모양)"}, {"kanji": "しみじみ", "kana": "しみじみ", "ko": "절실히, 곰곰히"}];
+
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+function parse(text) {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const p = l.split(/\t|,/).map(s => s.trim());
+    return { kanji: p[0], kana: p[1] || '', ko: p.slice(2).join(', ') };
+  }).filter(w => w.kanji);
+}
+
+let words = load(KEY_WORDS, null) || DEFAULT_WORDS;
+let state = load(KEY_STATE, {});   // setIndex -> 진행 상태
+let cur = null;                    // 현재 세트 번호
+
+const $ = id => document.getElementById(id);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const setCount = () => Math.ceil(words.length / SET_SIZE);
+const setIds = s => Array.from({ length: Math.min(SET_SIZE, words.length - s * SET_SIZE) }, (_, i) => s * SET_SIZE + i);
+
+/*
+ 세트 상태
+  round      : 몇 회독째 (1~7)
+  pass       : 이번 회독 안에서 몇 번째 사이클 (1 = 첫 사이클, 2+ = 틀린 것 반복)
+  queue      : 이번 사이클에 남은 문제
+  wrong      : 이번 사이클에서 틀린 문제
+  firstWrong : 이번 회독 첫 사이클에서 틀린 문제 → 다음 회독 범위
+  done       : 세트 완료
+*/
+function newRound(round, pool) {
+  return { round, pass: 1, queue: shuffle(pool), wrong: [], firstWrong: [], total: pool.length, done: false };
+}
+function getState(s) {
+  if (!state[s]) state[s] = newRound(1, setIds(s));
+  return state[s];
+}
+
+function renderHome() {
+  $('home').hidden = false; $('quiz').hidden = true; $('between').hidden = true;
+  const n = setCount();
+  const doneCount = Object.values(state).filter(x => x.done).length;
+  $('summary').textContent = `총 ${words.length}단어 · ${n}세트 · 완료 ${doneCount}/${n}`;
+  $('sets').innerHTML = '';
+  for (let s = 0; s < n; s++) {
+    const ids = setIds(s), st = state[s];
+    const b = document.createElement('button');
+    b.className = 'set' + (st && st.done ? ' done' : '');
+    let label = '시작 전', pct = 0;
+    if (st && st.done) { label = `완료 (${st.round}회독)`; pct = 100; }
+    else if (st) {
+      label = `${st.round}회독` + (st.pass > 1 ? ` · 오답 ${st.pass - 1}차` : '') + ` · 남은 ${st.queue.length}`;
+      pct = Math.round((st.total - st.queue.length) / st.total * 100);
+    }
+    b.innerHTML = `<b>${ids[0] + 1}–${ids[ids.length - 1] + 1}</b><span>${label}</span><div class="bar"><i style="width:${pct}%"></i></div>`;
+    b.onclick = () => openSet(s);
+    $('sets').appendChild(b);
+  }
+}
+
+function openSet(s) {
+  cur = s;
+  const st = getState(s);
+  if (st.done) {
+    between('완료한 세트예요', `${st.round}회독까지 마쳤어요. 처음부터 다시 할까요?`, '다시 시작', () => {
+      state[s] = newRound(1, setIds(s)); save(KEY_STATE, state); showCard();
+    });
+    return;
+  }
+  save(KEY_STATE, state);
+  showCard();
+}
+
+function showCard() {
+  const st = state[cur];
+  $('home').hidden = true; $('between').hidden = true; $('quiz').hidden = false;
+  const w = words[st.queue[0]];
+  $('kanji').textContent = w.kanji;
+  $('kana').textContent = w.kana; $('ko').textContent = w.ko;
+  $('kana').hidden = true; $('ko').hidden = true;
+  $('showKana').classList.remove('on'); $('showKo').classList.remove('on');
+  const passLabel = st.pass === 1 ? '' : ` · 오답 ${st.pass - 1}차`;
+  const answered = (st.pass === 1 ? st.total : st.queueLen || st.queue.length) - st.queue.length;
+  $('qmeta').textContent = `세트 ${cur + 1} · ${st.round}/${MAX_ROUND}회독${passLabel}\n${answered + 1} / ${st.pass === 1 ? st.total : st.queueLen}`;
+  $('qmeta').style.whiteSpace = 'pre-line';
+}
+
+function answer(known) {
+  const st = state[cur];
+  const id = st.queue.shift();
+  if (!known) {
+    st.wrong.push(id);
+    if (st.pass === 1) st.firstWrong.push(id);
+  }
+  if (st.queue.length) { save(KEY_STATE, state); showCard(); return; }
+  endPass();
+}
+
+function endPass() {
+  const st = state[cur];
+  if (st.wrong.length) {
+    // 틀린 것만 다시, 다 맞출 때까지
+    const n = st.wrong.length;
+    st.pass++; st.queue = shuffle(st.wrong); st.queueLen = n; st.wrong = [];
+    save(KEY_STATE, state);
+    between(`${n}개 틀렸어요`, '틀린 단어만 다시 풀어요. 다 맞춰야 이번 회독을 탈출할 수 있어요.', '오답 다시 풀기', showCard);
+    return;
+  }
+  // 이번 회독 탈출
+  const next = st.firstWrong;
+  if (!next.length || st.round >= MAX_ROUND) {
+    st.done = true; save(KEY_STATE, state);
+    const why = !next.length ? `${st.round}회독 첫 사이클에서 전부 맞췄어요!` : `${MAX_ROUND}회독을 모두 마쳤어요!`;
+    between('세트 완료 🎉', why, '목록으로', renderHome);
+    return;
+  }
+  const r = st.round;
+  state[cur] = newRound(r + 1, next);
+  save(KEY_STATE, state);
+  between(`${r}회독 탈출!`, `${r}회독 첫 사이클에서 틀렸던 ${next.length}개로 ${r + 1}회독을 시작해요.`, `${r + 1}회독 시작`, showCard);
+}
+
+function between(title, text, btn, fn) {
+  $('home').hidden = true; $('quiz').hidden = true; $('between').hidden = false;
+  $('bTitle').textContent = title; $('bText').textContent = text; $('bBtn').textContent = btn;
+  $('bBtn').onclick = fn;
+}
+
+$('showKana').onclick = () => { $('kana').hidden = !$('kana').hidden; $('showKana').classList.toggle('on'); };
+$('showKo').onclick = () => { $('ko').hidden = !$('ko').hidden; $('showKo').classList.toggle('on'); };
+$('okBtn').onclick = () => answer(true);
+$('noBtn').onclick = () => answer(false);
+$('backBtn').onclick = renderHome;
+
+// 단축키: 1 히라가나 / 2 한국어 / ← 모르겠음 / → 알겠음 / Enter·Space 안내 화면 넘기기
+document.addEventListener('keydown', e => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === 'TEXTAREA') return;
+  if (!$('quiz').hidden) {
+    const btn = { '1': 'showKana', '2': 'showKo', ArrowLeft: 'noBtn', ArrowRight: 'okBtn' }[e.key];
+    if (btn) { e.preventDefault(); $(btn).onclick(); }
+  } else if (!$('between').hidden && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault(); $('bBtn').onclick();
+  }
+});
+// 버튼에 포커스가 남아 Space/Enter가 두 번 눌리는 것 방지
+document.querySelectorAll('button').forEach(b => b.addEventListener('mouseup', () => b.blur()));
+
+let resetArmed = false;
+$('resetBtn').onclick = () => {
+  if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = '한 번 더 누르면 초기화'; return; }
+  state = {}; save(KEY_STATE, state); resetArmed = false; $('resetBtn').textContent = '진행 기록 초기화';
+  $('importMsg').textContent = '진행 기록을 초기화했어요.'; renderHome();
+};
+$('importBtn').onclick = () => {
+  const list = parse($('importBox').value);
+  if (!list.length) { $('importMsg').textContent = '읽을 수 있는 단어가 없어요.'; return; }
+  words = list; state = {}; save(KEY_WORDS, words); save(KEY_STATE, state);
+  $('importMsg').textContent = `${list.length}개 단어를 불러왔어요.`; $('importBox').value = ''; renderHome();
+};
+
+renderHome();
+</script>
+</body>
+</html>
