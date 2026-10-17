@@ -63,6 +63,16 @@
       </div>
       <p class="small" id="importMsg"></p>
     </details>
+    <details>
+      <summary>진행 기록 옮기기 (다른 기기·주소)</summary>
+      <p class="small">기록은 이 브라우저에만 저장돼요. 옮기려면 기존 곳에서 <b>내보내기</b> → 나온 코드를 복사 → 새 곳에서 붙여넣고 <b>가져오기</b>.</p>
+      <textarea id="syncBox" placeholder="내보내기를 누르면 여기에 코드가 나와요"></textarea>
+      <div class="row">
+        <button id="exportBtn">내보내기</button>
+        <button id="restoreBtn">가져오기</button>
+      </div>
+      <p class="small" id="syncMsg"></p>
+    </details>
   </section>
 
   <!-- 퀴즈 -->
@@ -237,6 +247,25 @@ $('showKo').onclick = () => { $('ko').hidden = !$('ko').hidden; $('showKo').clas
 $('okBtn').onclick = () => answer(true);
 $('noBtn').onclick = () => answer(false);
 $('backBtn').onclick = renderHome;
+
+$('exportBtn').onclick = () => {
+  const custom = load(KEY_WORDS, null);
+  $('syncBox').value = JSON.stringify({ v: 2, state, words: custom });
+  $('syncBox').select();
+  let copied = false;
+  try { copied = document.execCommand('copy'); } catch {}
+  $('syncMsg').textContent = copied ? '코드를 복사했어요. 새 곳에 붙여넣고 가져오기를 누르세요.' : '코드를 전체 선택해서 복사하세요.';
+};
+$('restoreBtn').onclick = () => {
+  let data;
+  try { data = JSON.parse($('syncBox').value.trim()); } catch {}
+  if (!data || data.v !== 2 || typeof data.state !== 'object' || !data.state) {
+    $('syncMsg').textContent = '코드를 읽을 수 없어요. 내보내기 코드를 그대로 붙여넣었는지 확인하세요.'; return;
+  }
+  if (Array.isArray(data.words) && data.words.length) { words = data.words; save(KEY_WORDS, words); }
+  state = data.state; save(KEY_STATE, state);
+  $('syncMsg').textContent = '진행 기록을 가져왔어요.'; renderHome();
+};
 
 // 단축키: 1 히라가나 / 2 한국어 / ← 모르겠음 / → 알겠음 / Enter·Space 안내 화면 넘기기
 document.addEventListener('keydown', e => {
