@@ -42,6 +42,8 @@
   details summary{cursor:pointer}
   .small{font-size:12px;color:var(--muted)}
   kbd{font:12px ui-monospace,Menlo,monospace;padding:1px 6px;border-radius:5px;border:1px solid currentColor;opacity:.6;margin:0 2px}
+  input{flex:2;min-width:0;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:16px ui-monospace,Menlo,monospace;text-transform:uppercase}
+  .code{font:600 24px ui-monospace,Menlo,monospace;letter-spacing:2px;color:var(--ink);text-align:center;margin:10px 0}
   [hidden]{display:none!important}
 </style>
 </head>
@@ -62,6 +64,24 @@
         <button id="resetBtn">진행 기록 초기화</button>
       </div>
       <p class="small" id="importMsg"></p>
+    </details>
+    <details id="syncPanel">
+      <summary>기기 간 자동 동기화 <span id="syncBadge"></span></summary>
+      <p class="small" id="syncStatus"></p>
+      <div id="syncOffView">
+        <p class="small">컴퓨터·폰이 같은 기록을 쓰게 해요. 기록이 있는 기기에서 <b>동기화 시작</b>을 누르고, 나온 코드를 다른 기기에 입력하세요.</p>
+        <div class="row"><button id="syncNewBtn">이 기기로 동기화 시작</button></div>
+        <div class="row">
+          <input id="syncCodeInput" placeholder="다른 기기의 동기화 코드" autocomplete="off" autocapitalize="characters">
+          <button id="syncJoinBtn">코드로 연결</button>
+        </div>
+      </div>
+      <div id="syncOnView" hidden>
+        <p class="code" id="syncCode"></p>
+        <p class="small">다른 기기에서 이 코드를 입력하면 같은 기록을 써요. 코드를 아는 사람은 기록을 볼 수 있으니 공유하지 마세요.</p>
+        <div class="row"><button id="syncOffBtn">이 기기 동기화 끄기</button></div>
+      </div>
+      <p class="small" id="syncNote"></p>
     </details>
     <details>
       <summary>진행 기록 옮기기 (다른 기기·주소)</summary>
@@ -135,6 +155,82 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 const setCount = () => Math.ceil(words.length / SET_SIZE);
 const setIds = s => Array.from({ length: Math.min(SET_SIZE, words.length - s * SET_SIZE) }, (_, i) => s * SET_SIZE + i);
 
+/* 기기 간 동기화
+   sync = { id: 동기화 코드, updatedAt: 이 기기 기록의 마지막 수정 시각 }
+   서버에는 { state, words, updatedAt } 를 코드별로 저장하고, 더 최근 쪽이 이김 */
+const KEY_SYNC = 'n3v2.sync';
+const API = (location.protocol === 'file:' ? 'https://jlptword.vercel.app' : '') + '/api/progress';
+let sync = load(KEY_SYNC, {});
+let pushTimer = null, syncError = '';
+
+function saveState() {
+  save(KEY_STATE, state);
+  sync.updatedAt = Date.now(); save(KEY_SYNC, sync);
+  if (sync.id) { clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); }
+}
+const payload = () => ({ state, words: load(KEY_WORDS, null), updatedAt: sync.updatedAt || 0 });
+
+async function api(method, id, body) {
+  const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, {
+    method, headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined, keepalive: method === 'PUT',
+  });
+  if (res.status === 404) return null;
+  if (res.status === 409) return { conflict: await res.json() };
+  if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
+  return res.json();
+}
+async function push() {
+  clearTimeout(pushTimer); pushTimer = null;
+  if (!sync.id) return;
+  try {
+    const r = await api('PUT', sync.id, payload()); syncError = '';
+    if (r && r.conflict) {
+      // 다른 기기에서 더 최근에 저장함 → 그 기록을 따름
+      applyRemote(r.conflict);
+      if (!$('quiz').hidden && state[cur] && !state[cur].done) showCard(); else renderHome();
+    }
+  }
+  catch (e) { syncError = '서버에 저장하지 못했어요. 다음에 다시 시도해요.'; }
+  renderSync();
+}
+function applyRemote(remote) {
+  state = remote.state || {};
+  if (Array.isArray(remote.words) && remote.words.length) { words = remote.words; save(KEY_WORDS, words); }
+  else if (load(KEY_WORDS, null)) { words = DEFAULT_WORDS; try { localStorage.removeItem(KEY_WORDS); } catch {} }
+  save(KEY_STATE, state);
+  sync.updatedAt = remote.updatedAt; save(KEY_SYNC, sync);
+}
+async function pull() {
+  if (!sync.id) return;
+  try {
+    const remote = await api('GET', sync.id);
+    syncError = '';
+    if (remote && remote.updatedAt > (sync.updatedAt || 0)) {
+      applyRemote(remote);
+      renderHome();
+    } else if (!remote || remote.updatedAt < (sync.updatedAt || 0)) {
+      await push();
+    }
+  } catch (e) { syncError = '서버에 연결하지 못했어요. 기록은 이 기기에 저장되고 나중에 맞춰져요.'; }
+  renderSync();
+}
+function newSyncId() {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(r, b => abc[b % abc.length]).join('');
+}
+const fmtId = id => id.replace(/(.{4})(?=.)/g, '$1-');
+function renderSync() {
+  $('syncOffView').hidden = !!sync.id; $('syncOnView').hidden = !sync.id;
+  $('syncCode').textContent = sync.id ? fmtId(sync.id) : '';
+  $('syncBadge').textContent = sync.id ? (syncError ? '· ⚠︎ 연결 안 됨' : '· 켜짐') : '';
+  $('syncStatus').textContent = syncError || (sync.id ? '이 기기는 동기화 중이에요. 답할 때마다 자동으로 저장돼요.' : '');
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && pushTimer) push();
+  else if (document.visibilityState === 'visible' && $('quiz').hidden && $('between').hidden) pull();
+});
+
 /*
  세트 상태
   round      : 몇 회독째 (1~7)
@@ -156,7 +252,7 @@ function renderHome() {
   $('home').hidden = false; $('quiz').hidden = true; $('between').hidden = true;
   const n = setCount();
   const doneCount = Object.values(state).filter(x => x.done).length;
-  $('summary').textContent = `총 ${words.length}단어 · ${n}세트 · 완료 ${doneCount}/${n}`;
+  $('summary').textContent = `총 ${words.length}단어 · ${n}세트 · 완료 ${doneCount}/${n}` + (sync.id ? ' · 동기화 켜짐' : '');
   $('sets').innerHTML = '';
   for (let s = 0; s < n; s++) {
     const ids = setIds(s), st = state[s];
@@ -179,11 +275,11 @@ function openSet(s) {
   const st = getState(s);
   if (st.done) {
     between('완료한 세트예요', `${st.round}회독까지 마쳤어요. 처음부터 다시 할까요?`, '다시 시작', () => {
-      state[s] = newRound(1, setIds(s)); save(KEY_STATE, state); showCard();
+      state[s] = newRound(1, setIds(s)); saveState(); showCard();
     });
     return;
   }
-  save(KEY_STATE, state);
+  saveState();
   showCard();
 }
 
@@ -208,7 +304,7 @@ function answer(known) {
     st.wrong.push(id);
     if (st.pass === 1) st.firstWrong.push(id);
   }
-  if (st.queue.length) { save(KEY_STATE, state); showCard(); return; }
+  if (st.queue.length) { saveState(); showCard(); return; }
   endPass();
 }
 
@@ -218,21 +314,21 @@ function endPass() {
     // 틀린 것만 다시, 다 맞출 때까지
     const n = st.wrong.length;
     st.pass++; st.queue = shuffle(st.wrong); st.queueLen = n; st.wrong = [];
-    save(KEY_STATE, state);
+    saveState();
     between(`${n}개 틀렸어요`, '틀린 단어만 다시 풀어요. 다 맞춰야 이번 회독을 탈출할 수 있어요.', '오답 다시 풀기', showCard);
     return;
   }
   // 이번 회독 탈출
   const next = st.firstWrong;
   if (!next.length || st.round >= MAX_ROUND) {
-    st.done = true; save(KEY_STATE, state);
+    st.done = true; saveState();
     const why = !next.length ? `${st.round}회독 첫 사이클에서 전부 맞췄어요!` : `${MAX_ROUND}회독을 모두 마쳤어요!`;
     between('세트 완료 🎉', why, '목록으로', renderHome);
     return;
   }
   const r = st.round;
   state[cur] = newRound(r + 1, next);
-  save(KEY_STATE, state);
+  saveState();
   between(`${r}회독 탈출!`, `${r}회독 첫 사이클에서 틀렸던 ${next.length}개로 ${r + 1}회독을 시작해요.`, `${r + 1}회독 시작`, showCard);
 }
 
@@ -263,8 +359,39 @@ $('restoreBtn').onclick = () => {
     $('syncMsg').textContent = '코드를 읽을 수 없어요. 내보내기 코드를 그대로 붙여넣었는지 확인하세요.'; return;
   }
   if (Array.isArray(data.words) && data.words.length) { words = data.words; save(KEY_WORDS, words); }
-  state = data.state; save(KEY_STATE, state);
+  state = data.state; saveState();
   $('syncMsg').textContent = '진행 기록을 가져왔어요.'; renderHome();
+};
+
+$('syncNewBtn').onclick = async () => {
+  sync.id = newSyncId(); sync.updatedAt = sync.updatedAt || Date.now(); save(KEY_SYNC, sync);
+  $('syncNote').textContent = '서버에 올리는 중…';
+  await push();
+  $('syncNote').textContent = syncError ? '' : '동기화를 시작했어요. 다른 기기에서 위 코드를 입력하세요.';
+};
+let joinArmed = '';
+$('syncJoinBtn').onclick = async () => {
+  const id = $('syncCodeInput').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (id.length !== 12) { $('syncNote').textContent = '코드는 12자리예요 (하이픈 제외).'; return; }
+  const hasLocal = Object.keys(state).length > 0;
+  if (hasLocal && joinArmed !== id) {
+    joinArmed = id; $('syncJoinBtn').textContent = '한 번 더 누르면 연결';
+    $('syncNote').textContent = '연결하면 이 기기의 기록은 그 코드의 기록으로 바뀌어요.'; return;
+  }
+  joinArmed = ''; $('syncJoinBtn').textContent = '코드로 연결';
+  $('syncNote').textContent = '불러오는 중…';
+  try {
+    const remote = await api('GET', id);
+    if (!remote) { $('syncNote').textContent = '그 코드의 기록이 없어요. 코드를 다시 확인하세요.'; return; }
+    sync.id = id; applyRemote(remote); syncError = '';
+    $('syncCodeInput').value = '';
+    $('syncNote').textContent = '연결했어요. 이제 이 기기도 같은 기록을 써요.';
+    renderHome();
+  } catch (e) { $('syncNote').textContent = '서버에 연결하지 못했어요. 인터넷 연결을 확인하세요.'; }
+};
+$('syncOffBtn').onclick = () => {
+  delete sync.id; save(KEY_SYNC, sync); syncError = '';
+  $('syncNote').textContent = '이 기기의 동기화를 껐어요. 기록은 이 기기에 남아 있어요.'; renderSync();
 };
 
 // 단축키: 1 히라가나 / 2 한국어 / ← 모르겠음 / → 알겠음 / Enter·Space 안내 화면 넘기기
@@ -283,17 +410,19 @@ document.querySelectorAll('button').forEach(b => b.addEventListener('mouseup', (
 let resetArmed = false;
 $('resetBtn').onclick = () => {
   if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = '한 번 더 누르면 초기화'; return; }
-  state = {}; save(KEY_STATE, state); resetArmed = false; $('resetBtn').textContent = '진행 기록 초기화';
+  state = {}; saveState(); resetArmed = false; $('resetBtn').textContent = '진행 기록 초기화';
   $('importMsg').textContent = '진행 기록을 초기화했어요.'; renderHome();
 };
 $('importBtn').onclick = () => {
   const list = parse($('importBox').value);
   if (!list.length) { $('importMsg').textContent = '읽을 수 있는 단어가 없어요.'; return; }
-  words = list; state = {}; save(KEY_WORDS, words); save(KEY_STATE, state);
+  words = list; state = {}; save(KEY_WORDS, words); saveState();
   $('importMsg').textContent = `${list.length}개 단어를 불러왔어요.`; $('importBox').value = ''; renderHome();
 };
 
 renderHome();
+renderSync();
+pull();
 </script>
 </body>
 </html>
